@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎬 MovieArl
 
-## Getting Started
+Streaming film, serial TV, dan animasi **subtitle Indonesia** — dibangun dengan Next.js 16 + TypeScript + Tailwind CSS v4.
 
-First, run the development server:
+## ✨ Fitur
+
+- 🔍 **Live search** — dropdown instan dengan poster saat mengetik
+- ▶️ **Player langsung** — MP4 multi-kualitas (360p–1080p) via proxy internal
+- 💬 **Subtitle Indonesia** — auto WebVTT default, 13 bahasa tersedia
+- ❤️ **Favorit** & 🕘 **Riwayat tonton** — tersimpan di perangkat
+- ⏯️ **Lanjutkan Menonton** — lanjut ke episode terakhir dari beranda
+- 📱 **Mobile-first** — bottom navigation, responsive sampai desktop
+- 🔐 **Login Google** — NextAuth.js
+- 🎠 Hero carousel + rak kategori bergaya bioskop
+
+## 🚀 Menjalankan Lokal
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka http://localhost:3001
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🔑 Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Salin `.env.example` → `.env.local`, lalu isi:
 
-## Learn More
+| Variable | Keterangan |
+|---|---|
+| `GOOGLE_CLIENT_ID` | OAuth client ID dari [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `NEXTAUTH_SECRET` | Random string (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`) |
+| `NEXTAUTH_URL` | `http://localhost:3001` |
 
-To learn more about Next.js, take a look at the following resources:
+Callback URI di Google Console: `http://localhost:3001/api/auth/callback/google`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🏗️ Arsitektur
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+├─ api/
+│  ├─ auth/[...nextauth]/   Login Google (NextAuth)
+│  ├─ caption/route.ts      Proxy SRT→VTT subtitle
+│  ├─ search/suggest/       Live search JSON
+│  └─ video/route.ts        Proxy video (Range + Referer injection)
+├─ browse/[tab]/            Film · Serial · Animasi (+ sort & pagination)
+├─ detail/[slug]/           Detail + daftar episode + favorit
+├─ watch/[slug]/            Player + pilih episode
+├─ favorit/ · riwayat/ · login/
+lib/moviebox.ts             Client API themoviebox.xyz (JWT guest otomatis)
+components/                 Player, HeroCarousel, LiveSearch, BottomNav, ...
+```
 
-## Deploy on Vercel
+## ⚙️ Catatan Teknis
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Sumber data**: API tidak resmi MovieBox (`themoviebox.xyz`) — metadata, katalog, dan stream. Tidak ada scraping HTML; semuanya endpoint JSON.
+- **Proxy video**: CDN upstream menuntut header `Referer` tertentu yang tidak bisa dikirim browser — request video dipipakan lewat `/api/video` dengan dukungan HTTP Range agar seek berfungsi.
+- **Subtitle**: upstream menyediakan `.srt`; route `/api/caption` mengonversi ke WebVTT on-the-fly karena `<track>` hanya menerima VTT.
+- **Token**: JWT guest diambil otomatis dari header `x-user` dan diperbarui diam-diam.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 Lisensi
+
+MIT
