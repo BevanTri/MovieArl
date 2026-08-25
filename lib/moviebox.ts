@@ -319,8 +319,12 @@ export async function getStreams(
     const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${qSe}&ep=${qEp}&detailPath=${encodeURIComponent(detailPath)}`;
     const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${qSe}&detailEp=${qEp}&lang=en`;
 
-    // Datacenter (mis. Vercel) kadang dibedakan perlakuannya oleh CDN:
-    // coba beberapa kombinasi Origin sebelum menyerah.
+    // Datacenter (mis. Vercel) diblokir WAF oleh host stream →
+    // opsional relai lewat Cloudflare Worker (env STREAM_PROXY_URL).
+    const proxy = process.env.STREAM_PROXY_URL?.trim();
+    const fetchUrl = proxy ? `${proxy}?url=${encodeURIComponent(playUrl)}` : playUrl;
+
+    // Datacenter kadang dibedakan perlakuannya juga lewat header:
     const originHeader: Record<string, string> =
       originMode === "h5"
         ? { Origin: "https://h5.aoneroom.com" }
@@ -329,7 +333,7 @@ export async function getStreams(
           : {};
 
     for (const tokenMode of [true, false] as const) {
-      const res = await fetch(playUrl, {
+      const res = await fetch(fetchUrl, {
         headers: {
           ...PLAYER_HEADERS,
           ...originHeader,
