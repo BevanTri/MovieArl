@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Righteous, Poppins } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
-import AuthProvider from "@/components/AuthProvider";
 import "./globals.css";
 
 const righteous = Righteous({
@@ -34,11 +33,9 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${righteous.variable} ${poppins.variable}`}>
       <body className="antialiased bg-bg text-ink min-h-dvh font-body pb-14 sm:pb-0">
-        <AuthProvider>
-          <Navbar />
-          <main>{children}</main>
-          <BottomNav />
-        </AuthProvider>
+        <Navbar />
+        <main>{children}</main>
+        <BottomNav />
       </body>
     </html>
   );

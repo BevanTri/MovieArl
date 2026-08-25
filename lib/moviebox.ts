@@ -1,6 +1,6 @@
-const SITE_BASE = "https://themoviebox.xyz";
+export const SITE_BASE = "https://themoviebox.xyz";
 const API_BASE = "https://h5-api.aoneroom.com/wefeed-h5api-bff";
-const STREAM_BASE = "https://h5.aoneroom.com/wefeed-h5-bff";
+export const STREAM_BASE = "https://h5.aoneroom.com/wefeed-h5-bff";
 
 let bearerToken: string | null = null;
 
@@ -15,7 +15,7 @@ const DEFAULT_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
 };
 
-const PLAYER_HEADERS: Record<string, string> = {
+export const PLAYER_HEADERS: Record<string, string> = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   Accept: "application/json, text/plain, */*",
@@ -314,28 +314,44 @@ export async function getStreams(
     limited?: boolean;
   };
 
-  async function play(): Promise<RawPlayData> {
+  async function play(originMode: "h5" | "site" | "none"): Promise<RawPlayData> {
     const token = await getBearerToken();
     const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${qSe}&ep=${qEp}&detailPath=${encodeURIComponent(detailPath)}`;
     const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${qSe}&detailEp=${qEp}&lang=en`;
 
-    const res = await fetch(playUrl, {
-      headers: {
-        ...PLAYER_HEADERS,
-        Referer: referer,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      redirect: "follow",
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error("Stream service unavailable");
-    return ((await res.json())?.data ?? {}) as RawPlayData;
+    // Datacenter (mis. Vercel) kadang dibedakan perlakuannya oleh CDN:
+    // coba beberapa kombinasi Origin sebelum menyerah.
+    const originHeader: Record<string, string> =
+      originMode === "h5"
+        ? { Origin: "https://h5.aoneroom.com" }
+        : originMode === "site"
+          ? { Origin: SITE_BASE }
+          : {};
+
+    for (const tokenMode of [true, false] as const) {
+      const res = await fetch(playUrl, {
+        headers: {
+          ...PLAYER_HEADERS,
+          ...originHeader,
+          Referer: referer,
+          ...(tokenMode && token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        redirect: "follow",
+        cache: "no-store",
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as { data?: RawPlayData };
+      const data = json.data ?? {};
+      if (data.hasResource || (data.streams ?? []).length) return data;
+    }
+    return {};
   }
 
-  let data: RawPlayData = await play();
+  let data: RawPlayData = await play("h5");
 
-  // Fallback terakhir: coba kombinasi se/ep lain kalau masih kosong
+  // Fallback terakhir: kombinasi se/ep + origin lain kalau masih kosong
   if (!data.hasResource && !(data.streams ?? []).length) {
+    const originModes: Array<"h5" | "site" | "none"> = ["site", "none", "h5"];
     const attempts: Array<[number, number]> = isSeries
       ? [
           [qSe, qEp === 1 ? 2 : 1],
@@ -346,11 +362,13 @@ export async function getStreams(
           [1, 1],
           [0, 1],
         ];
-    for (const [aSe, aEp] of attempts) {
+    outer: for (const [aSe, aEp] of attempts) {
       qSe = aSe;
       qEp = aEp;
-      data = await play();
-      if (data.hasResource || (data.streams ?? []).length) break;
+      for (const mode of originModes) {
+        data = await play(mode);
+        if (data.hasResource || (data.streams ?? []).length) break outer;
+      }
     }
   }
 

@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import LiveSearch from "./LiveSearch";
+import { useUser } from "./useUser";
 
 const LINKS = [
   { href: "/", label: "Beranda" },
@@ -15,7 +15,7 @@ const LINKS = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { user } = useUser();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,26 +69,26 @@ export default function Navbar() {
               <LiveSearch />
             </div>
 
-            {session?.user ? (
+            {user ? (
               <div ref={menuRef} className="relative">
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
                   aria-label="Menu akun"
                   className="w-8 h-8 rounded-full bg-rausch text-white text-xs font-bold hover:bg-rausch-active transition-colors shadow-card active:scale-95 overflow-hidden flex items-center justify-center"
                 >
-                  {session.user.image ? (
+                  {user.picture ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={session.user.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={user.picture} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    (session.user.name ?? "U").charAt(0)
+                    (user.name ?? "U").charAt(0)
                   )}
                 </button>
 
                 {menuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-44 bg-surface border border-line rounded-xl overflow-hidden shadow-[var(--shadow-card-lg)] animate-fade-in z-50">
                     <div className="px-3 py-2.5 border-b border-line/40">
-                      <p className="text-sm text-ink truncate">{session.user.name}</p>
-                      <p className="text-xs text-muted truncate">{session.user.email}</p>
+                      <p className="text-sm text-ink truncate">{user.name}</p>
+                      <p className="text-xs text-muted truncate">{user.email}</p>
                     </div>
                     <Link href="/favorit" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-ink2 hover:bg-surface2/60 transition-colors">
                       Favorit
@@ -96,12 +96,9 @@ export default function Navbar() {
                     <Link href="/riwayat" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-ink2 hover:bg-surface2/60 transition-colors">
                       Riwayat
                     </Link>
-                    <button
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                      className="w-full text-left px-3 py-2.5 text-sm text-rausch hover:bg-surface2/60 transition-colors"
-                    >
+                    <a href="/api/auth/logout" className="block px-3 py-2.5 text-sm text-rausch hover:bg-surface2/60 transition-colors">
                       Keluar
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
