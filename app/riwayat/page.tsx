@@ -46,7 +46,7 @@ export default function HistoryPage() {
                 </h3>
                 <p className="text-xs text-muted mt-1">
                   {h.se > 0 ? `Season ${h.se} · Episode ${h.ep}` : "Film"} ·{" "}
-                  {new Date(h.at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                  {new Date(h.at ?? 0).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
                 </p>
               </div>
               <span className="shrink-0 inline-flex items-center gap-1 text-xs text-rausch font-medium">

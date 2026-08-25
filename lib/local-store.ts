@@ -15,7 +15,7 @@ export type HistoryItem = {
   poster: string | null;
   se: number;
   ep: number;
-  at: number;
+  at?: number;
 };
 
 const FAV_KEY = "moviearl_favs";

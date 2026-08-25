@@ -307,7 +307,14 @@ export async function getStreams(
   const isSeries = qSe > 0;
   if (isSeries && qEp < 1) qEp = 1;
 
-  async function play(): Promise<StreamResult> {
+  type RawPlayData = {
+    hasResource?: boolean;
+    streams?: Array<{ url?: string; resolutions?: string; format?: string; size?: number }>;
+    hls?: Array<{ url?: string; resolutions?: string }>;
+    limited?: boolean;
+  };
+
+  async function play(): Promise<RawPlayData> {
     const token = await getBearerToken();
     const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${qSe}&ep=${qEp}&detailPath=${encodeURIComponent(detailPath)}`;
     const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${qSe}&detailEp=${qEp}&lang=en`;
@@ -325,14 +332,7 @@ export async function getStreams(
     return ((await res.json())?.data ?? {}) as RawPlayData;
   }
 
-  type RawPlayData = {
-    hasResource?: boolean;
-    streams?: Array<{ url?: string; resolutions?: string; format?: string; size?: number }>;
-    hls?: Array<{ url?: string; resolutions?: string }>;
-    limited?: boolean;
-  };
-
-  let data = await play();
+  let data: RawPlayData = await play();
 
   // Fallback terakhir: coba kombinasi se/ep lain kalau masih kosong
   if (!data.hasResource && !(data.streams ?? []).length) {
@@ -355,11 +355,11 @@ export async function getStreams(
   }
 
   const sources: StreamSource[] = (data.streams ?? [])
-    .filter((s) => s.url)
+    .filter((s): s is { url: string; resolutions?: string; format?: string; size?: number } => Boolean(s.url))
     .map((s) => ({
       resolution: s.resolutions ? `${s.resolutions}p` : "HD",
       format: s.format ?? "mp4",
-      url: s.url!,
+      url: s.url,
       size: s.size ?? null,
     }));
 

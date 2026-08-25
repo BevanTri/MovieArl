@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getStreams, getCaptions, getDetail } from "@/lib/moviebox";
+import { getStreams, getCaptions, getDetail, type StreamSource, type Caption } from "@/lib/moviebox";
 import Player from "@/components/Player";
 import HistoryRecorder from "@/components/HistoryRecorder";
 
@@ -43,9 +43,9 @@ export default async function WatchPage({
     }
   } catch {}
 
-  let sources = [];
+  let sources: StreamSource[] = [];
   let hlsUrls: string[] = [];
-  let captions = [];
+  let captions: Caption[] = [];
   try {
     if (subjectId && slug) {
       const r = await getStreams(subjectId, slug, se, ep);
