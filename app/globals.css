@@ -23,14 +23,25 @@
   --shadow-glow: 0 0 20px rgba(225, 29, 72, 0.25);
 }
 
+* { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
 body {
   background-color: var(--color-bg);
+  color: var(--color-ink);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
+::selection { background: var(--color-rausch); color: white; }
+:focus-visible { outline: 2px solid var(--color-rausch); outline-offset: 2px; }
 
 .font-display {
   font-family: var(--font-display);
   letter-spacing: 0.02em;
 }
+
+/* surfaces */
+.surface { background-color: var(--color-surface); }
+.surface2 { background-color: var(--color-surface2); }
+.eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 
 /* Kartu bingkai ala Mangava */
 .frame-card {

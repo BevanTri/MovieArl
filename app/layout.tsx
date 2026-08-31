@@ -30,6 +30,17 @@ export const metadata: Metadata = {
     title: "MovieArl",
     statusBarStyle: "black-translucent",
   },
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "https://moviearl.vercel.app"),
+  openGraph: {
+    title: "MovieArl — Nonton Film & Serial Sub Indo",
+    description: "Streaming film, serial, dan animasi subtitle Indonesia.",
+    url: "/",
+    siteName: "MovieArl",
+    locale: "id_ID",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: "MovieArl", description: "Streaming film, serial, dan animasi subtitle Indonesia." },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {
