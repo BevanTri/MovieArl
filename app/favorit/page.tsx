@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getFavorites, toggleFavorite, type FavItem } from "@/lib/local-store";
+import { getFavorites, toggleFavorite, pullSync, type FavItem } from "@/lib/local-store";
 
 export default function FavoritesPage() {
   const [items, setItems] = useState<FavItem[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setItems(getFavorites());
-    setMounted(true);
+    pullSync().finally(() => {
+      setItems(getFavorites());
+      setMounted(true);
+    });
   }, []);
 
   function remove(slug: string) {

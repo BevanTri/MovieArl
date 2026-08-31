@@ -42,3 +42,7 @@ next-env.d.ts
 
 dev.log
 *.log
+SECRET CLIENT JSON/
+.SECRET*
+.env.local
+.env.tmp

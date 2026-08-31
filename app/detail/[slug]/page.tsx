@@ -1,25 +1,36 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getDetail } from "@/lib/moviebox";
+import { getDetail, parseSeasons } from "@/lib/moviebox";
 import FavoriteButton from "@/components/FavoriteButton";
 import type { FavItem } from "@/lib/local-store";
 
 export const revalidate = 600;
 
-type Season = { se: number; maxEp: number; allEp?: string };
-
-function parseEpisodes(seasons: Season[] | undefined) {
-  if (!seasons?.length) return [];
-  return seasons
-    .map((s) => {
-      const eps = (s.allEp ?? "")
-        .split(",")
-        .map((x) => parseInt(x.trim(), 10))
-        .filter((n) => Number.isFinite(n));
-      const list = eps.length ? eps : Array.from({ length: s.maxEp || 0 }, (_, i) => i + 1);
-      return { se: s.se, episodes: list };
-    })
-    .filter((s) => s.episodes.length > 0);
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const result = await getDetail(decodeURIComponent(slug));
+    const subject = ((result?.subject ?? {}) as Record<string, unknown>) ?? {};
+    const title = String(subject.title ?? "");
+    if (!title) return {};
+    const desc =
+      String((subject as { description?: string }).description ?? "").slice(0, 160) ||
+      "Nonton streaming sub Indonesia.";
+    const poster = ((subject.cover ?? {}) as { url?: string }).url ?? undefined;
+    return {
+      title,
+      description: desc,
+      openGraph: { title, description: desc, images: poster ? [poster] : undefined, type: "video.movie" },
+      twitter: { card: poster ? "summary_large_image" : "summary", title, description: desc, images: poster ? [poster] : undefined },
+    };
+  } catch {
+    return {};
+  }
 }
 
 export default async function DetailPage({
@@ -30,22 +41,24 @@ export default async function DetailPage({
   const { slug } = await params;
   let d: Record<string, unknown> | null = null;
   let failed = false;
+  let missing = false;
   try {
     const result = await getDetail(decodeURIComponent(slug));
-    if (result === null) {
-      return (
-        <div className="pt-24 pb-16 text-center px-4">
-          <p className="font-display text-xl font-bold mb-2">Judul tidak tersedia</p>
-          <p className="text-muted text-sm mb-6">Film/serial ini mungkin sudah dihapus dari sumber.</p>
-          <Link href="/" className="inline-block px-6 py-2.5 rounded-xl bg-rausch text-white font-semibold text-sm active:scale-[0.97] transition-transform">
-            Kembali ke Beranda
-          </Link>
-        </div>
-      );
-    }
-    d = result as Record<string, unknown>;
+    if (result === null) missing = true;
+    else d = result as Record<string, unknown>;
   } catch {
     failed = true;
+  }
+  if (missing) {
+    return (
+      <div className="pt-24 pb-16 text-center px-4">
+        <p className="font-display text-xl font-bold mb-2">Judul tidak tersedia</p>
+        <p className="text-muted text-sm mb-6">Film/serial ini mungkin sudah dihapus dari sumber.</p>
+        <Link href="/" className="inline-block px-6 py-2.5 rounded-xl bg-rausch text-white font-semibold text-sm active:scale-[0.97] transition-transform">
+          Kembali ke Beranda
+        </Link>
+      </div>
+    );
   }
   const subject = (d?.subject ?? {}) as Record<string, unknown>;
 
@@ -64,8 +77,10 @@ export default async function DetailPage({
   }
 
   const cover = (subject.cover ?? {}) as { url?: string };
-  const resource = (d?.resource ?? {}) as { seasons?: Season[] };
-  const seasons = parseEpisodes(resource.seasons);
+  const resource = (d?.resource ?? {}) as {
+    seasons?: Array<{ se: number; maxEp: number; allEp?: string }>;
+  };
+  const seasons = parseSeasons(resource.seasons);
   const isSeries = seasons.length > 0;
   const subjectId = String(subject.subjectId ?? "");
   const detailPath = String(subject.detailPath ?? slug);

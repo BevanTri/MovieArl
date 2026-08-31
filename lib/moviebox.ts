@@ -82,6 +82,8 @@ export type MediaItem = {
   badge?: string | null;
   rating?: string | null;
   year?: string | null;
+  genre?: string | null;
+  country?: string | null;
 };
 
 export type HomeSection = {
@@ -108,6 +110,8 @@ function mapSubject(sub: RawSubject): MediaItem {
     badge: pickStr(sub.corner),
     rating: pickStr(sub.imdbRatingValue),
     year: releaseDate ? releaseDate.slice(0, 4) : null,
+    genre: pickStr(sub.genre),
+    country: pickStr(sub.countryName) ?? pickStr(sub.country),
   };
 }
 
@@ -259,7 +263,14 @@ export async function search(q: string, page = 1): Promise<CategoryResult> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type DetailData = any;
 
+// Cache detail sebentar — generateMetadata + body render sama-sama butuh
+const detailCache = new Map<string, { at: number; data: DetailData | null }>();
+const DETAIL_CACHE_TTL = 60_000;
+
 export async function getDetail(slug: string): Promise<DetailData | null> {
+  const hit = detailCache.get(slug);
+  if (hit && Date.now() - hit.at < DETAIL_CACHE_TTL) return hit.data;
+
   const res = await fetch(
     `${API_BASE}/detail?detailPath=${encodeURIComponent(slug)}`,
     {
@@ -269,13 +280,19 @@ export async function getDetail(slug: string): Promise<DetailData | null> {
     },
   );
 
-  // Judul memang sudah tidak ada di upstream — bukan error jaringan
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Upstream API error ${res.status}`);
+  let data: DetailData | null;
+  if (res.status === 404) {
+    // Judul memang sudah tidak ada di upstream — bukan error jaringan
+    data = null;
+  } else if (!res.ok) {
+    throw new Error(`Upstream API error ${res.status}`);
+  } else {
+    readTokenFromXUser(res.headers.get("x-user"));
+    data = ((await res.json()) as { data?: DetailData }).data ?? {};
+  }
 
-  readTokenFromXUser(res.headers.get("x-user"));
-  const json = (await res.json()) as { data?: DetailData };
-  return json.data ?? {};
+  detailCache.set(slug, { at: Date.now(), data });
+  return data;
 }
 
 export type StreamSource = {
@@ -295,6 +312,47 @@ export type StreamResult = {
   limited: boolean;
 };
 
+type RawPlayData = {
+  hasResource?: boolean;
+  streams?: Array<{ url?: string; resolutions?: string; format?: string; size?: number }>;
+  hls?: Array<{ url?: string; resolutions?: string }>;
+  limited?: boolean;
+};
+
+// Cache play response sebentar — hindari fetch ulang upstream saat refresh/seek
+const playCache = new Map<string, { at: number; data: RawPlayData }>();
+const PLAY_CACHE_TTL = 60_000;
+
+async function playOnce(
+  subjectId: string,
+  qSe: number,
+  qEp: number,
+  detailPath: string,
+): Promise<RawPlayData> {
+  const token = await getBearerToken();
+  const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${qSe}&ep=${qEp}&detailPath=${encodeURIComponent(detailPath)}`;
+  const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${qSe}&detailEp=${qEp}&lang=en`;
+
+  // Datacenter (mis. Vercel) diblokir WAF oleh host stream →
+  // opsional relai lewat Cloudflare Worker (env STREAM_PROXY_URL).
+  const proxy = process.env.STREAM_PROXY_URL?.trim();
+  const fetchUrl = proxy ? `${proxy}?url=${encodeURIComponent(playUrl)}` : playUrl;
+
+  const res = await fetch(fetchUrl, {
+    headers: {
+      ...PLAYER_HEADERS,
+      Origin: "https://h5.aoneroom.com",
+      Referer: referer,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    redirect: "follow",
+    cache: "no-store",
+  });
+  if (!res.ok) return {};
+  const json = (await res.json()) as { data?: RawPlayData };
+  return json.data ?? {};
+}
+
 export async function getStreams(
   subjectId: string,
   detailPath: string,
@@ -307,75 +365,40 @@ export async function getStreams(
   const isSeries = qSe > 0;
   if (isSeries && qEp < 1) qEp = 1;
 
-  type RawPlayData = {
-    hasResource?: boolean;
-    streams?: Array<{ url?: string; resolutions?: string; format?: string; size?: number }>;
-    hls?: Array<{ url?: string; resolutions?: string }>;
-    limited?: boolean;
-  };
-
-  async function play(originMode: "h5" | "site" | "none"): Promise<RawPlayData> {
-    const token = await getBearerToken();
-    const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${qSe}&ep=${qEp}&detailPath=${encodeURIComponent(detailPath)}`;
-    const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${qSe}&detailEp=${qEp}&lang=en`;
-
-    // Datacenter (mis. Vercel) diblokir WAF oleh host stream →
-    // opsional relai lewat Cloudflare Worker (env STREAM_PROXY_URL).
-    const proxy = process.env.STREAM_PROXY_URL?.trim();
-    const fetchUrl = proxy ? `${proxy}?url=${encodeURIComponent(playUrl)}` : playUrl;
-
-    // Datacenter kadang dibedakan perlakuannya juga lewat header:
-    const originHeader: Record<string, string> =
-      originMode === "h5"
-        ? { Origin: "https://h5.aoneroom.com" }
-        : originMode === "site"
-          ? { Origin: SITE_BASE }
-          : {};
-
-    for (const tokenMode of [true, false] as const) {
-      const res = await fetch(fetchUrl, {
-        headers: {
-          ...PLAYER_HEADERS,
-          ...originHeader,
-          Referer: referer,
-          ...(tokenMode && token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        redirect: "follow",
-        cache: "no-store",
-      });
-      if (!res.ok) continue;
-      const json = (await res.json()) as { data?: RawPlayData };
-      const data = json.data ?? {};
-      if (data.hasResource || (data.streams ?? []).length) return data;
-    }
-    return {};
+  const cacheKey = `${subjectId}|${qSe}|${qEp}`;
+  const hit = playCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < PLAY_CACHE_TTL) {
+    return toStreamResult(subjectId, qSe, qEp, hit.data);
   }
 
-  let data: RawPlayData = await play("h5");
+  let data: RawPlayData = await playOnce(subjectId, qSe, qEp, detailPath);
 
-  // Fallback terakhir: kombinasi se/ep + origin lain kalau masih kosong
+  // Fallback ringkas: cukup variasi nomor episode, origin/token tunggal
   if (!data.hasResource && !(data.streams ?? []).length) {
-    const originModes: Array<"h5" | "site" | "none"> = ["site", "none", "h5"];
     const attempts: Array<[number, number]> = isSeries
       ? [
           [qSe, qEp === 1 ? 2 : 1],
           [1, 1],
-          [0, 0],
         ]
-      : [
-          [1, 1],
-          [0, 1],
-        ];
-    outer: for (const [aSe, aEp] of attempts) {
+      : [[1, 1]];
+    for (const [aSe, aEp] of attempts) {
       qSe = aSe;
       qEp = aEp;
-      for (const mode of originModes) {
-        data = await play(mode);
-        if (data.hasResource || (data.streams ?? []).length) break outer;
-      }
+      data = await playOnce(subjectId, qSe, qEp, detailPath);
+      if (data.hasResource || (data.streams ?? []).length) break;
     }
   }
 
+  playCache.set(cacheKey, { at: Date.now(), data });
+  return toStreamResult(subjectId, qSe, qEp, data);
+}
+
+function toStreamResult(
+  subjectId: string,
+  qSe: number,
+  qEp: number,
+  data: RawPlayData,
+): StreamResult {
   const sources: StreamSource[] = (data.streams ?? [])
     .filter((s): s is { url: string; resolutions?: string; format?: string; size?: number } => Boolean(s.url))
     .map((s) => ({
@@ -404,6 +427,25 @@ export type Caption = {
   lanName?: string;
 };
 
+export type SeasonEpisodes = { se: number; episodes: number[] };
+
+// allEp kadang kosong di upstream → fallback generate 1..maxEp
+export function parseSeasons(
+  seasons?: Array<{ se: number; maxEp?: number; allEp?: string }>,
+): SeasonEpisodes[] {
+  if (!seasons?.length) return [];
+  return seasons
+    .map((s) => {
+      const eps = (s.allEp ?? "")
+        .split(",")
+        .map((x) => parseInt(x.trim(), 10))
+        .filter((n) => Number.isFinite(n));
+      const list = eps.length ? eps : Array.from({ length: s.maxEp || 0 }, (_, i) => i + 1);
+      return { se: s.se, episodes: list };
+    })
+    .filter((s) => s.episodes.length > 0);
+}
+
 export async function getCaptions(
   subjectId: string,
   detailPath: string,
@@ -414,9 +456,12 @@ export async function getCaptions(
   const playUrl = `${STREAM_BASE}/web/subject/play?subjectId=${subjectId}&se=${se}&ep=${ep}&detailPath=${encodeURIComponent(detailPath)}`;
   const referer = `${SITE_BASE.replace("themoviebox.xyz", "h5.aoneroom.com")}/spa/videoPlayPage/movies/${detailPath}?id=${subjectId}&type=/movie/detail&detailSe=${se}&detailEp=${ep}&lang=en`;
 
-  const res = await fetch(playUrl, {
+  const proxy = process.env.STREAM_PROXY_URL?.trim();
+  const capPlayUrl = proxy ? `${proxy}?url=${encodeURIComponent(playUrl)}` : playUrl;
+  const res = await fetch(capPlayUrl, {
     headers: {
       ...PLAYER_HEADERS,
+      Origin: "https://h5.aoneroom.com",
       Referer: referer,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },

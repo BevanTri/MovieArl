@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getHistory } from "@/lib/local-store";
+import { getHistory, pullSync } from "@/lib/local-store";
 
 export default function HistoryPage() {
   const [items, setItems] = useState<ReturnType<typeof getHistory>>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setItems(getHistory());
-    setMounted(true);
+    pullSync().finally(() => {
+      setItems(getHistory());
+      setMounted(true);
+    });
   }, []);
 
   return (

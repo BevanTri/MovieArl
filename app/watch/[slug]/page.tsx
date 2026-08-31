@@ -1,9 +1,34 @@
 import Link from "next/link";
-import { getStreams, getCaptions, getDetail, type StreamSource, type Caption } from "@/lib/moviebox";
+import type { Metadata } from "next";
+import { getStreams, getCaptions, getDetail, parseSeasons, type StreamSource, type Caption } from "@/lib/moviebox";
 import Player from "@/components/Player";
 import HistoryRecorder from "@/components/HistoryRecorder";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  try {
+    const result = await getDetail(decodeURIComponent(rawSlug));
+    const subject = ((result?.subject ?? {}) as Record<string, unknown>) ?? {};
+    const title = String(subject.title ?? "");
+    if (!title) return {};
+    const desc = `Nonton ${title} streaming sub Indonesia.`;
+    const poster = ((subject.cover ?? {}) as { url?: string }).url ?? undefined;
+    return {
+      title,
+      description: desc,
+      openGraph: { title, description: desc, images: poster ? [poster] : undefined, type: "video.movie" },
+      twitter: { card: poster ? "summary_large_image" : "summary", title, description: desc, images: poster ? [poster] : undefined },
+    };
+  } catch {
+    return {};
+  }
+}
 
 export default async function WatchPage({
   params,
@@ -16,7 +41,7 @@ export default async function WatchPage({
   const { sid: rawSid, se: rawSe, ep: rawEp } = await searchParams;
   const slug = decodeURIComponent(rawSlug);
   const subjectId = rawSid ?? "";
-  let se = parseInt(rawSe ?? "0", 10) || 0;
+  const se = parseInt(rawSe ?? "0", 10) || 0;
   let ep = parseInt(rawEp ?? "0", 10) || 0;
   if (se > 0 && ep < 1) ep = 1;
 
@@ -33,13 +58,7 @@ export default async function WatchPage({
       const resource = (result.resource ?? {}) as {
         seasons?: Array<{ se: number; maxEp: number; allEp?: string }>;
       };
-      seasonsForNav = (resource.seasons ?? []).map((s) => ({
-        se: s.se,
-        episodes: (s.allEp ?? "")
-          .split(",")
-          .map((x) => parseInt(x.trim(), 10))
-          .filter(Number.isFinite),
-      }));
+      seasonsForNav = parseSeasons(resource.seasons);
     }
   } catch {}
 
@@ -48,12 +67,31 @@ export default async function WatchPage({
   let captions: Caption[] = [];
   try {
     if (subjectId && slug) {
-      const r = await getStreams(subjectId, slug, se, ep);
+      const [r, caps] = await Promise.all([
+        getStreams(subjectId, slug, se, ep),
+        getCaptions(subjectId, slug, se, ep),
+      ]);
       sources = r.sources;
       hlsUrls = r.hls.map((h) => h.url).filter((u): u is string => Boolean(u));
-      captions = await getCaptions(subjectId, slug, se, ep);
+      captions = caps;
     }
   } catch {}
+
+  // Episode berikutnya: lanjut di musim yang sama, lalu musim berikutnya
+  let nextHref: string | null = null;
+  if (se > 0 && seasonsForNav.length) {
+    const si = seasonsForNav.findIndex((s) => s.se === se);
+    if (si !== -1) {
+      const eps = seasonsForNav[si].episodes;
+      const ei = eps.indexOf(ep);
+      if (ei !== -1 && ei < eps.length - 1) {
+        nextHref = `/watch/${encodeURIComponent(slug)}?sid=${subjectId}&se=${se}&ep=${eps[ei + 1]}`;
+      } else if (si < seasonsForNav.length - 1 && seasonsForNav[si + 1].episodes.length) {
+        const ns = seasonsForNav[si + 1];
+        nextHref = `/watch/${encodeURIComponent(slug)}?sid=${subjectId}&se=${ns.se}&ep=${ns.episodes[0]}`;
+      }
+    }
+  }
 
   return (
     <div className="pt-3 pb-16">
@@ -71,7 +109,7 @@ export default async function WatchPage({
           {se > 0 && <span className="text-rausch"> · S{se}E{ep}</span>}
         </h1>
 
-        <Player sources={sources} hlsUrls={hlsUrls} captions={captions} poster={poster} />
+        <Player sources={sources} hlsUrls={hlsUrls} captions={captions} poster={poster} nextHref={nextHref} />
 
         {title && (
           <HistoryRecorder
@@ -80,22 +118,22 @@ export default async function WatchPage({
         )}
 
         {seasonsForNav.length > 0 && (
-          <section className="mt-8 space-y-6">
+          <section className="mt-8 space-y-8">
             {seasonsForNav.map(({ se: s, episodes }) => (
               <div key={s}>
-                <h2 className="eyebrow mb-2.5">Musim {s}</h2>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <h2 className="font-display text-base sm:text-lg font-bold mb-3 text-ink">Musim {s}</h2>
+                <div className="grid grid-cols-4 min-[420px]:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
                   {episodes.map((e) => (
                     <Link
                       key={e}
                       href={`/watch/${encodeURIComponent(slug)}?sid=${subjectId}&se=${s}&ep=${e}`}
-                      className={`min-w-[44px] px-3 py-2 rounded-lg text-center text-sm border transition-all active:scale-95 ${
+                      className={`flex items-center justify-center py-2.5 rounded-lg text-xs sm:text-sm font-medium border transition-all active:scale-[0.96] ${
                         s === se && e === ep
                           ? "border-rausch bg-rausch/15 text-rausch font-semibold"
-                          : "surface border-line/50 text-muted hover:text-ink hover:border-rausch/40"
+                          : "surface border-line/50 text-ink2 hover:text-rausch hover:border-rausch/40"
                       }`}
                     >
-                      {e}
+                      EP{e}
                     </Link>
                   ))}
                 </div>

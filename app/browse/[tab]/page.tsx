@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getMovies, getTvSeries, getAnimation, type CategoryResult } from "@/lib/moviebox";
-import MediaCard from "@/components/MediaCard";
+import BrowseFilter from "@/components/BrowseFilter";
 
 export const revalidate = 600;
 
@@ -87,11 +87,7 @@ export default async function BrowsePage({
 
       {data?.items.length ? (
         <>
-          <div className="grid grid-cols-3 min-[420px]:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-5 reveal-grid">
-            {data.items.map((item, i) => (
-              <MediaCard key={`${item.subjectId}-${i}`} item={item} />
-            ))}
-          </div>
+          <BrowseFilter key={`${tab}-${page}-${sort}`} items={data.items} />
 
           <div className="mt-8 flex items-center justify-center gap-2 sm:gap-3">
             {page > 1 ? (

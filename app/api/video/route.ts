@@ -22,14 +22,38 @@ export async function GET(req: NextRequest) {
   }
 
   const range = req.headers.get("range");
-  const upstream = await fetch(url.toString(), {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148 Safari/537.36",
-      Referer: "https://themoviebox.xyz/",
-      ...(range ? { Range: range } : {}),
-    },
-    cache: "no-store",
-  });
+  const baseHeaders: Record<string, string> = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148 Safari/537.36",
+    Referer: "https://themoviebox.xyz/",
+    "X-Client-Info": '{"timezone":"Asia/Jakarta"}',
+    "X-Forwarded-For": "103.174.121.9",
+    "CF-IPCountry": "ID",
+    "X-Real-IP": "103.174.121.9",
+    Origin: "https://themoviebox.xyz",
+    ...(range ? { Range: range } : {}),
+  };
+  // Coba langsung dulu (viewer Indonesia lolos & cepat). Kalau ditolak/hang,
+  // fallback via Worker (spoof region ID untuk host h5).
+  let upstream: Response;
+  try {
+    upstream = await fetch(url.toString(), {
+      headers: baseHeaders,
+      cache: "no-store",
+      signal: AbortSignal.timeout(6000),
+    });
+  } catch {
+    upstream = new Response(null, { status: 599 });
+  }
+  if (!upstream.ok && upstream.status !== 206) {
+    const proxy = process.env.STREAM_PROXY_URL?.trim();
+    if (proxy) {
+      const proxied = await fetch(`${proxy}?url=${encodeURIComponent(url.toString())}`, {
+        headers: baseHeaders,
+        cache: "no-store",
+      });
+      if (proxied.ok || proxied.status === 206) upstream = proxied;
+    }
+  }
 
   if (!upstream.ok && upstream.status !== 206) {
     return NextResponse.json({ error: `upstream ${upstream.status}` }, { status: 502 });

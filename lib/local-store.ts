@@ -45,14 +45,17 @@ export function isFavorite(slug: string): boolean {
 export function toggleFavorite(item: FavItem): boolean {
   const list = getFavorites();
   const idx = list.findIndex((f) => f.slug === item.slug);
+  let added: boolean;
   if (idx >= 0) {
     list.splice(idx, 1);
-    write(FAV_KEY, list);
-    return false;
+    added = false;
+  } else {
+    list.unshift(item);
+    added = true;
   }
-  list.unshift(item);
   write(FAV_KEY, list);
-  return true;
+  if (typeof window !== "undefined") fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ favs: list.slice(0, 100) }) }).catch(() => {});
+  return added;
 }
 
 export function getHistory(): HistoryItem[] {
@@ -63,4 +66,16 @@ export function saveHistory(item: HistoryItem) {
   const list = getHistory().filter((h) => h.slug !== item.slug);
   list.unshift({ ...item, at: Date.now() });
   write(HIS_KEY, list.slice(0, 50));
+  // ponytail: sync lintas device jika login
+  if (typeof window !== "undefined") fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history: list.slice(0, 50) }) }).catch(() => {});
+}
+
+export async function pullSync() {
+  try {
+    const r = await fetch("/api/sync", { cache: "no-store" });
+    if (!r.ok) return;
+    const j = (await r.json()) as { favs?: FavItem[]; history?: HistoryItem[] };
+    if (Array.isArray(j.favs) && j.favs.length) write(FAV_KEY, j.favs.slice(0, 100));
+    if (Array.isArray(j.history) && j.history.length) write(HIS_KEY, j.history.slice(0, 50));
+  } catch {}
 }

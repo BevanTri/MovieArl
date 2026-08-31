@@ -11,13 +11,25 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(raw, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148 Safari/537.36",
-        Referer: "https://themoviebox.xyz/",
-      },
+    const baseHeaders = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/148 Safari/537.36",
+      Referer: "https://themoviebox.xyz/",
+      "X-Client-Info": '{"timezone":"Asia/Jakarta"}',
+    };
+    let res = await fetch(raw, {
+      headers: baseHeaders,
       cache: "no-store",
     });
+    if (!res.ok) {
+      const proxy = process.env.STREAM_PROXY_URL?.trim();
+      if (proxy) {
+        const alt = await fetch(`${proxy}?url=${encodeURIComponent(raw)}`, {
+          headers: baseHeaders,
+          cache: "no-store",
+        });
+        if (alt.ok) res = alt;
+      }
+    }
     if (!res.ok) return NextResponse.json({ error: "upstream" }, { status: 502 });
 
     let body = await res.text();

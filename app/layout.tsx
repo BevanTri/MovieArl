@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Righteous, Poppins } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
+import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
 
 const righteous = Righteous({
@@ -19,6 +20,16 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: { default: "MovieArl — Nonton Film & Serial Sub Indo", template: "%s — MovieArl" },
   description: "Streaming film, serial, dan animasi subtitle Indonesia.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "MovieArl",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
@@ -33,6 +44,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${righteous.variable} ${poppins.variable}`}>
       <body className="antialiased bg-bg text-ink min-h-dvh font-body pb-14 sm:pb-0">
+        <PwaRegister />
         <Navbar />
         <main>{children}</main>
         <BottomNav />
