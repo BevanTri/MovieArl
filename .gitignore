@@ -46,3 +46,7 @@ SECRET CLIENT JSON/
 .SECRET*
 .env.local
 .env.tmp
+
+# agents / skills (local only)
+.agents/
+.claude/
