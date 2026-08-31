@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDetail, parseSeasons } from "@/lib/moviebox";
 import FavoriteButton from "@/components/FavoriteButton";
+import ShareButtons from "@/components/ShareButtons";
+import AdSlot from "@/components/AdSlot";
 import type { FavItem } from "@/lib/local-store";
 
 export const revalidate = 600;
@@ -150,12 +152,14 @@ export default async function DetailPage({
 
             <FavoriteButton item={favItem} />
           </div>
+          <ShareButtons title={String(subject.title)} slug={detailPath} />
 
           {Boolean((subject as { description?: string }).description) && (
             <p className="mt-6 text-[13px] sm:text-sm leading-relaxed text-muted line-clamp-6 sm:line-clamp-none text-justify sm:text-left">
               {String((subject as { description?: string }).description)}
             </p>
           )}
+          <div className="mt-4"><AdSlot /></div>
         </div>
       </div>
 

@@ -3,6 +3,8 @@ import { Righteous, Poppins } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import BottomNav from "@/components/BottomNav";
 import PwaRegister from "@/components/PwaRegister";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const righteous = Righteous({
@@ -59,6 +61,8 @@ export default function RootLayout({
         <Navbar />
         <main>{children}</main>
         <BottomNav />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
