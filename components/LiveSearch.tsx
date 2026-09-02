@@ -40,7 +40,7 @@ export default function LiveSearch({ mobile = false }: { mobile?: boolean }) {
   return (
     <div ref={boxRef} className={mobile ? "relative" : "relative"}>
       <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-theme-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <input
@@ -57,21 +57,21 @@ export default function LiveSearch({ mobile = false }: { mobile?: boolean }) {
           }}
           placeholder="Cari film..."
           aria-label="Cari film"
-          className={`w-full bg-surface2/60 border border-line rounded-lg pl-9 pr-3 py-1.5 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-rausch/30 focus:border-rausch transition-all ${
+          className={`w-full bg-theme-surface-2/50 border border-theme-line rounded-lg pl-9 pr-3 py-1.5 text-sm text-theme-ink placeholder:text-theme-muted focus:outline-none focus:ring-2 focus:ring-rausch/30 focus:border-rausch transition-all ${
             mobile ? "" : "w-36 lg:w-48"
           }`}
         />
       </div>
 
       {open && (
-        <div className="absolute top-full mt-1.5 w-full min-w-[280px] right-0 bg-surface border border-line rounded-xl overflow-hidden shadow-[var(--shadow-card-lg)] animate-fade-in z-50">
+        <div className="absolute top-full mt-1.5 w-full min-w-[280px] right-0 bg-theme-surface border border-theme-line rounded-xl overflow-hidden shadow-card-lg animate-fade-in z-50">
           {results.map((item) =>
             item.slug ? (
               <Link
                 key={item.slug}
                 href={`/detail/${item.slug}`}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface2/60 transition-colors border-b border-line/40 last:border-0"
+                className="flex items-center gap-3 px-3 py-2.5 hover:bg-theme-surface-2/50 transition-colors border-b border-theme-line/20 last:border-0"
               >
                 {item.poster ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -80,20 +80,20 @@ export default function LiveSearch({ mobile = false }: { mobile?: boolean }) {
                   <div className="w-8 h-11 rounded-md shrink-0 skeleton" />
                 )}
                 <div className="min-w-0">
-                  <span className="text-sm text-ink truncate block">{item.title}</span>
-                  {item.year && <span className="text-xs text-muted mt-0.5 block">{item.year}</span>}
+                  <span className="text-sm text-theme-ink truncate block">{item.title}</span>
+                  {item.year && <span className="text-xs text-theme-muted mt-0.5 block">{item.year}</span>}
                 </div>
               </Link>
             ) : null,
           )}
           {q.length >= 2 && results.length === 0 && (
-            <div className="px-3 py-4 text-center text-sm text-muted">Tidak ditemukan</div>
+            <div className="px-3 py-4 text-center text-sm text-theme-muted">Tidak ditemukan</div>
           )}
           {q.length >= 2 && results.length > 0 && (
             <Link
               href={`/search?q=${encodeURIComponent(q.trim())}`}
               onClick={() => setOpen(false)}
-              className="block px-3 py-2.5 text-center text-xs text-muted hover:text-ink bg-surface2/40 transition-colors font-medium"
+              className="block px-3 py-2.5 text-center text-xs text-theme-muted hover:text-theme-ink bg-theme-surface-2/30 transition-colors font-medium"
             >
               Lihat semua hasil →
             </Link>

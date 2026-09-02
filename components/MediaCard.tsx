@@ -28,34 +28,39 @@ export default function MediaCard({
           {item.badge}
         </span>
       )}
+      {!isHot && item.badge && (
+        <span className="absolute top-2 left-2 z-10 inline-block whitespace-nowrap px-2 py-0.5 text-[10px] font-bold rounded text-white shadow-md bg-slate-700">
+          {item.badge}
+        </span>
+      )}
 
-      <div className="relative aspect-[3/4] frame-card overflow-hidden">
+      <div className="aspect-[3/4] bg-theme-surface-2 rounded-xl p-1.5 shadow-card-lg ring-1 ring-theme-inverse/5 relative overflow-hidden">
         {item.posterUrl ? (
           <Image
             src={item.posterUrl}
             alt={item.name ?? ""}
             fill
             sizes={SIZES}
-            loading={variant === "row" ? "lazy" : "lazy"}
+            loading="lazy"
             className="w-full h-full object-cover rounded-lg skeleton group-hover/card:scale-[1.03] transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted text-xs p-2 text-center">
+          <div className="w-full h-full flex items-center justify-center text-theme-muted text-xs p-2 text-center">
             {item.name}
           </div>
         )}
         {item.rating && (
-          <span className="absolute top-2 right-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-goldchip/90 text-black">
-            ★ {item.rating}
+          <span className="absolute top-2 right-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-yellow-500/90 text-black shadow-sm">
+            {item.rating}
           </span>
         )}
       </div>
 
       <div className="p-1.5">
-        <h3 className="text-xs sm:text-sm font-semibold text-ink line-clamp-2 leading-snug group-hover/card:text-rausch transition-colors duration-200">
+        <h3 className="text-xs font-semibold text-theme-ink line-clamp-2 leading-snug group-hover/card:text-rausch transition-colors duration-200">
           {item.name}
         </h3>
-        {item.year && <p className="text-[11px] text-muted mt-0.5">{item.year}</p>}
+        {item.year && <p className="text-[11px] text-theme-muted mt-0.5">{item.year}</p>}
       </div>
     </Link>
   );

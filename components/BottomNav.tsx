@@ -36,7 +36,7 @@ export default function BottomNav() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-bg border-t border-line/50"
+      className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-theme-bg border-t border-theme-line/30"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
@@ -47,11 +47,9 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 min-w-0 transition-colors duration-150 ${
-                active ? "text-rausch" : "text-muted hover:text-ink"
-              }`}
+              className={`nav-tap flex flex-col items-center gap-0.5 px-2 py-1 min-w-0 transition-colors duration-150 ${active ? "text-rausch active" : "text-theme-muted hover:text-theme-ink"}`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <svg className="nav-icon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
               </svg>
               <span className="text-[10px] font-medium">{item.label}</span>

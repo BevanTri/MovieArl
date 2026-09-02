@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import LiveSearch from "./LiveSearch";
+import ThemeToggle from "./ThemeToggle";
 import { useUser } from "./useUser";
 
 const LINKS = [
@@ -29,16 +30,16 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 bg-bg border-b border-line/60">
+    <nav className="sticky top-0 z-50 bg-theme-bg border-b border-theme-line/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 items-center gap-3">
-          <Link href="/" className="flex items-center shrink-0">
-            <span className="font-display text-xl sm:text-2xl text-ink font-bold tracking-wide">
+          <Link href="/" className="flex items-center shrink-0 gap-1.5">
+            <span className="font-display text-xl sm:text-2xl text-theme-ink font-bold tracking-wide">
               Movie<span className="text-rausch">Arl</span>
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          <div className="hidden sm:flex items-center gap-1 flex-1 justify-center">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
@@ -46,7 +47,7 @@ export default function Navbar() {
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-150 ${
                   pathname === l.href
                     ? "text-rausch bg-rausch/10"
-                    : "text-muted hover:text-ink hover:bg-surface2/50"
+                    : "text-theme-muted hover:text-theme-ink hover:bg-theme-surface-2/50"
                 }`}
               >
                 {l.label}
@@ -54,18 +55,19 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <ThemeToggle />
             <button
               onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
               aria-label="Cari"
-              className="md:hidden w-10 h-10 rounded-full surface border border-line flex items-center justify-center text-ink hover:bg-surface2/50 transition-all active:scale-95"
+              className="sm:hidden w-10 h-10 rounded-full bg-theme-surface border border-theme-line flex items-center justify-center text-theme-ink hover:bg-theme-surface-2/50 transition-all active:scale-95 touch-target"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
 
-            <div className="hidden lg:block">
+            <div className="hidden sm:block">
               <LiveSearch />
             </div>
 
@@ -85,18 +87,18 @@ export default function Navbar() {
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-44 bg-surface border border-line rounded-xl overflow-hidden shadow-[var(--shadow-card-lg)] animate-fade-in z-50">
-                    <div className="px-3 py-2.5 border-b border-line/40">
-                      <p className="text-sm text-ink truncate">{user.name}</p>
-                      <p className="text-xs text-muted truncate">{user.email}</p>
+                  <div className="absolute right-0 top-full mt-2 w-44 bg-theme-surface border border-theme-line rounded-xl overflow-hidden shadow-card-lg animate-fade-in z-50">
+                    <div className="px-3 py-2.5 border-b border-theme-line/40">
+                      <p className="text-sm text-theme-ink truncate">{user.name}</p>
+                      <p className="text-xs text-theme-muted truncate">{user.email}</p>
                     </div>
-                    <Link href="/favorit" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-ink2 hover:bg-surface2/60 transition-colors">
+                    <Link href="/favorit" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-theme-ink-2 hover:bg-theme-surface-2/60 transition-colors">
                       Favorit
                     </Link>
-                    <Link href="/riwayat" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-ink2 hover:bg-surface2/60 transition-colors">
+                    <Link href="/riwayat" onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 text-sm text-theme-ink-2 hover:bg-theme-surface-2/60 transition-colors">
                       Riwayat
                     </Link>
-                    <a href="/api/auth/logout" className="block px-3 py-2.5 text-sm text-rausch hover:bg-surface2/60 transition-colors">
+                    <a href="/api/auth/logout" className="block px-3 py-2.5 text-sm text-rausch hover:bg-theme-surface-2/60 transition-colors">
                       Keluar
                     </a>
                   </div>
@@ -115,7 +117,7 @@ export default function Navbar() {
       </div>
 
       {mobileSearchOpen && (
-        <div className="border-t border-line/40 px-4 py-3 animate-slide-up">
+        <div className="border-t border-theme-line/40 px-4 py-3 animate-slide-up bg-theme-surface">
           <LiveSearch mobile />
         </div>
       )}
