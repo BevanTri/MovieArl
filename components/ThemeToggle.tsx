@@ -1,11 +1,14 @@
 "use client";
-import { useState } from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useEffect, useState } from "react";
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(() => {
-    if (typeof document !== "undefined") return !document.documentElement.classList.contains("light");
-    if (typeof window !== "undefined") return localStorage.getItem("theme") !== "light";
-    return true;
-  });
+  const [dark, setDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const isLight = document.documentElement.classList.contains("light") || localStorage.getItem("theme") === "light";
+    setDark(!isLight);
+  }, []);
   function toggle() {
     const nextDark = !dark;
     setDark(nextDark);
@@ -19,6 +22,11 @@ export default function ThemeToggle() {
       html.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+  }
+  if (!mounted) {
+    return (
+      <span className="w-10 h-10 rounded-full bg-theme-surface border border-theme-line block" aria-hidden />
+    );
   }
   return (
     <button onClick={toggle} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
