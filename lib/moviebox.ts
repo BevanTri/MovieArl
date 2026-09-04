@@ -35,12 +35,14 @@ function readTokenFromXUser(raw: string | null): void {
   }
 }
 
+let bearerAt = 0;
+const BEARER_TTL = 10 * 60 * 1000;
 export async function getBearerToken(): Promise<string> {
-  if (bearerToken) return bearerToken;
+  if (bearerToken && Date.now() - bearerAt < BEARER_TTL) return bearerToken;
   const res = await fetch(`${API_BASE}/home?host=themoviebox.xyz`, {
     headers: DEFAULT_HEADERS,
     redirect: "follow",
-    cache: "no-store",
+    next: { revalidate: 300 },
   });
   readTokenFromXUser(res.headers.get("x-user"));
   if (!bearerToken) {
@@ -48,6 +50,7 @@ export async function getBearerToken(): Promise<string> {
     const m = cookie.match(/token=([^;]+)/);
     if (m) bearerToken = m[1];
   }
+  if (bearerToken) bearerAt = Date.now();
   return bearerToken ?? "";
 }
 
@@ -67,7 +70,7 @@ async function mbRequest(
     },
     body: payload ? JSON.stringify(payload) : undefined,
     redirect: "follow",
-    cache: "no-store",
+    next: { revalidate: 120 },
   });
   readTokenFromXUser(res.headers.get("x-user"));
   if (!res.ok) throw new Error(`Upstream API error ${res.status}: ${url}`);
@@ -115,12 +118,16 @@ function mapSubject(sub: RawSubject): MediaItem {
   };
 }
 
+const homeCache = new Map<string, { at: number; data: HomeSection[] }>();
+const HOME_TTL = 5 * 60 * 1000;
 export async function getHome(): Promise<HomeSection[]> {
+  const hk = "home";
+  const hit = homeCache.get(hk);
+  if (hit && Date.now() - hit.at < HOME_TTL) return hit.data;
   const data = (await mbRequest(`${API_BASE}/home?host=themoviebox.xyz`)) as {
     data?: { operatingList?: Array<RawSubject> };
   };
   const sections: HomeSection[] = [];
-
   for (const op of data.data?.operatingList ?? []) {
     const opType = op.type as string;
     const title = (op.title as string) || "Featured";
@@ -164,6 +171,7 @@ export async function getHome(): Promise<HomeSection[]> {
     }
   }
 
+  homeCache.set(hk, { at: Date.now(), data: sections });
   return sections;
 }
 
