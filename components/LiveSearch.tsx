@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,8 +16,8 @@ export default function LiveSearch({ mobile = false }: { mobile?: boolean }) {
 
   useEffect(() => {
     if (q.trim().length < 2) {
-      setResults([]);
-      setOpen(false);
+      if (results.length) setResults([]);
+      if (open) setOpen(false);
       return;
     }
     const t = setTimeout(async () => {
@@ -27,6 +28,7 @@ export default function LiveSearch({ mobile = false }: { mobile?: boolean }) {
       } catch {}
     }, 300);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   useEffect(() => {

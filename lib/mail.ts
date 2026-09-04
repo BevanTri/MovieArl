@@ -16,7 +16,7 @@ export async function sendOtpEmail(email: string, code: string) {
   const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
   if (smtpHost) {
     try {
-      // @ts-ignore no types
+      // @ts-expect-error no types
       const nodemailer = await import("nodemailer");
       const tr = nodemailer.createTransport({
         host: smtpHost,

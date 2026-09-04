@@ -71,7 +71,7 @@ function PasswordForm() {
     e.preventDefault(); setLoading(true); setMsg("");
     const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pw }) });
     const j = await r.json().catch(() => ({})); setLoading(false);
-    if (!r.ok) setMsg(j.error || "Gagal"); else window.location.href = "/";
+    if (!r.ok) setMsg(j.error || "Gagal"); else window.location.assign("/");
   }
   return (
     <form onSubmit={submit} className="mt-6 pt-6 border-t border-line/50 space-y-2">
@@ -99,12 +99,12 @@ function DeleteAccount() {
     else setStep("code");
   }
   async function verify() {
-    setLoading(true);
+    setLoading(true); setMsg("");
     const r = await fetch("/api/auth/delete/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
     const j = await r.json().catch(() => ({}));
     setLoading(false);
-    if (!r.ok) alert(j.error || "Gagal");
-    else window.location.href = "/";
+    if (!r.ok) setMsg(j.error || "Gagal");
+    else window.location.assign("/");
   }
   if (step === "idle") {
     return (
@@ -126,6 +126,7 @@ function DeleteAccount() {
             Lanjut
           </button>
         </div>
+        {msg && <p className="text-xs text-rausch mt-2">{msg}</p>}
       </div>
     );
   }
@@ -141,6 +142,7 @@ function DeleteAccount() {
           Batal
         </button>
       </div>
+      {msg && <p className="text-xs text-rausch mt-2">{msg}</p>}
     </div>
   );
 }

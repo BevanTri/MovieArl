@@ -1,6 +1,6 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import MediaCard from "./MediaCard";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getHistory, type HistoryItem } from "@/lib/local-store";
@@ -9,6 +9,7 @@ export default function ResumeRow() {
   const [items, setItems] = useState<HistoryItem[]>([]);
 
   useEffect(() => {
+    // hydration-safe: read localStorage only on client
     setItems(getHistory().slice(0, 12));
   }, []);
 

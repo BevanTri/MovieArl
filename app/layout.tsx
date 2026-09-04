@@ -62,6 +62,7 @@ export default function RootLayout({
       <body className="antialiased bg-theme-bg text-theme-ink flex flex-col min-h-dvh font-body pb-14 sm:pb-0 overflow-x-hidden">
         <div id="app-splash" aria-hidden="true">
           <div className="app-splash-inner">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <div className="app-splash-logo"><img src="/icon-192.png" alt="MovieArl" className="app-splash-img" /></div>
             <div className="app-splash-name">MOVIEARL</div>
             <div className="app-splash-bar"><div className="app-splash-bar-fill"></div></div>
