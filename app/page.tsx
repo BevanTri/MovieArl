@@ -8,7 +8,12 @@ export const revalidate = 600;
 const MAX_SHELVES = 6;
 
 export default async function HomePage() {
-  const sections = await getHome();
+  let sections: Awaited<ReturnType<typeof getHome>> = [];
+  try {
+    sections = await getHome();
+  } catch {
+    sections = [];
+  }
   const banner = sections.find((s) => s.section === "Banner");
   // dedup judul sama (upstream kadang duplikat "Trending Indo Dubbed") — gabung items
   const deduped = new Map<string, typeof sections[number]>();
