@@ -39,18 +39,23 @@ let bearerAt = 0;
 const BEARER_TTL = 10 * 60 * 1000;
 export async function getBearerToken(): Promise<string> {
   if (bearerToken && Date.now() - bearerAt < BEARER_TTL) return bearerToken;
-  const res = await fetch(`${API_BASE}/home?host=themoviebox.xyz`, {
-    headers: DEFAULT_HEADERS,
-    redirect: "follow",
-    next: { revalidate: 300 },
-  });
-  readTokenFromXUser(res.headers.get("x-user"));
-  if (!bearerToken) {
-    const cookie = res.headers.get("set-cookie") ?? "";
-    const m = cookie.match(/token=([^;]+)/);
-    if (m) bearerToken = m[1];
-  }
-  if (bearerToken) bearerAt = Date.now();
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`${API_BASE}/home?host=themoviebox.xyz`, {
+      headers: DEFAULT_HEADERS,
+      redirect: "follow",
+      cache: "no-store",
+      signal: controller.signal,
+    }).finally(() => clearTimeout(t));
+    readTokenFromXUser(res.headers.get("x-user"));
+    if (!bearerToken) {
+      const cookie = res.headers.get("set-cookie") ?? "";
+      const m = cookie.match(/token=([^;]+)/);
+      if (m) bearerToken = m[1];
+    }
+    if (bearerToken) bearerAt = Date.now();
+  } catch {}
   return bearerToken ?? "";
 }
 
@@ -61,6 +66,8 @@ async function mbRequest(
   extraHeaders?: Record<string, string>,
 ): Promise<unknown> {
   const token = await getBearerToken();
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 8000);
   const res = await fetch(url, {
     method,
     headers: {
@@ -70,8 +77,9 @@ async function mbRequest(
     },
     body: payload ? JSON.stringify(payload) : undefined,
     redirect: "follow",
-    next: { revalidate: 120 },
-  });
+    cache: "no-store",
+    signal: controller.signal,
+  }).finally(() => clearTimeout(t));
   readTokenFromXUser(res.headers.get("x-user"));
   if (!res.ok) throw new Error(`Upstream API error ${res.status}: ${url}`);
   return res.json();
