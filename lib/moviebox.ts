@@ -225,8 +225,27 @@ export function getTvSeries(page = 1, sort = "RECOMMEND") {
   return getCategoryData(5, page, 24, sort);
 }
 
-export function getAnimation(page = 1, sort = "RECOMMEND") {
-  return getCategoryData(8, page, 24, sort);
+export async function getAnimation(page = 1, sort = "RECOMMEND") {
+  // strict like Mangava: filter pool by genre string, fallback to search 'anime'
+  const res = await getCategoryData(8, page, 24, sort);
+  const isAnim = (g?: string | null) => {
+    if (!g) return false;
+    const t = g.toLowerCase();
+    return t.includes("animation") || t.includes("anime") || t.includes("cartoon") || t.includes("family") && t.includes("animation");
+  };
+  const filtered = res.items.filter((it) => isAnim(it.genre));
+  if (filtered.length >= 8) return { ...res, items: filtered, total: filtered.length };
+  // fallback: search anime (Vercel IP returns proper anime)
+  try {
+    const s = await search("anime", page);
+    // search already returns anime-related, keep all but prioritize those with animation genre
+    const anim = s.items.filter((it) => !it.genre || isAnim(it.genre) || it.name?.toLowerCase().includes("anime"));
+    if (anim.length >= 8) return { page, perPage: 24, total: s.total, items: anim.slice(0, 24) };
+    if (s.items.length) return s;
+  } catch {}
+  // if still not enough, return filtered (could be empty -> show empty state, not live-action)
+  if (filtered.length) return { ...res, items: filtered, total: filtered.length };
+  return { ...res, items: [], total: 0 };
 }
 
 export async function searchSuggest(q: string): Promise<MediaItem[]> {
