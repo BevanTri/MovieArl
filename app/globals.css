@@ -140,10 +140,11 @@ body {
 ::-webkit-scrollbar-thumb:hover { background-color: rgb(var(--scrollbar-hover)); }
 * { scrollbar-width: thin; scrollbar-color: rgb(var(--scrollbar-thumb)) transparent; }
 
-/* Reveal */
-.reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
-.reveal.revealed { opacity: 1; transform: translateY(0); }
-@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; } }
+/* Reveal — with fallback auto-show if JS fails (old SW cache) */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; animation: reveal-fallback 0.6s ease 1.2s forwards; }
+.reveal.revealed { opacity: 1; transform: translateY(0); animation: none; }
+@keyframes reveal-fallback { to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; animation: none; } }
 
 .reveal-grid { opacity: 0; animation: app-card-in .45s ease forwards; }
 @keyframes app-card-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }

@@ -1,6 +1,6 @@
-// SW minimal + push/notif ready — tanpa caching agresif biar stream segar.
+// SW v2 — bump to force update old cache with removeChild bug (cdc1167)
 self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener("activate", (e) => e.waitUntil((async()=>{await self.clients.claim();const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))})()));
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   e.respondWith(fetch(e.request).catch(() => new Response("", { status: 504 })));
