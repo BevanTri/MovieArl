@@ -24,17 +24,24 @@ export default async function HomePage() {
   }
   const shelves = Array.from(deduped.values()).slice(0, MAX_SHELVES);
 
+  function hrefFor(title: string) {
+    const t = title.toLowerCase();
+    if (t.includes("serial") || t.includes("tv") || t.includes("drama")) return "/browse/tv";
+    if (t.includes("anim")) return "/browse/animation";
+    if (t.includes("indo") || t.includes("trending")) return "/browse/movies";
+    return "/browse/movies";
+  }
   return (
-    <div className="pt-2 sm:pt-4">
+    <div className="pt-2 sm:pt-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <HeroCarousel items={banner?.items ?? []} />
       <div className="mt-6">
         <ResumeRow />
         {shelves.map((s, i) => (
-          <MediaRow key={`${s.section}-${i}`} title={s.section} items={s.items.slice(0, 14)} moreHref="/browse/movies" />
+          <MediaRow key={`${s.section}-${i}`} title={s.section} items={s.items.slice(0, 14)} moreHref={hrefFor(s.section)} />
         ))}
       </div>
       {!sections.length && (
-        <p className="text-muted text-center py-20 px-4">Gagal memuat katalog. Coba refresh.</p>
+        <p className="text-theme-muted text-center py-20 px-4">Gagal memuat katalog. Coba refresh.</p>
       )}
     </div>
   );

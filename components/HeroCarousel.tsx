@@ -16,7 +16,7 @@ export default function HeroCarousel({ items }: { items: MediaItem[] }) {
 
   useEffect(() => {
     if (paused || slides.length < 2) return;
-    const t = setInterval(next, 6000);
+    const t = setInterval(next, 5000);
     return () => clearInterval(t);
   }, [next, paused, slides.length]);
 
@@ -54,6 +54,15 @@ export default function HeroCarousel({ items }: { items: MediaItem[] }) {
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-display text-theme-inverse font-bold leading-tight line-clamp-2">
             {active.name}
           </h1>
+          {active.genre && (
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              {active.genre.split(",").slice(0, 4).map((g) => (
+                <span key={g.trim()} className="text-[11px] px-2.5 py-1 rounded-md bg-theme-surface-2/20 text-theme-ink-2 border border-theme-line/20">
+                  {g.trim()}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-3 text-xs">
             {active.rating && (
               <span className="font-semibold px-1.5 py-0.5 rounded-md bg-yellow-500/90 text-black">★ {active.rating}</span>

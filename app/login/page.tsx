@@ -14,11 +14,11 @@ export default function LoginPage() {
 
   return (
     <div className="pt-16 sm:pt-24 pb-16 px-4 max-w-md mx-auto animate-slide-up">
-      <div className="surface border border-line/60 rounded-2xl p-8 sm:p-10 text-center shadow-[var(--shadow-card-lg)]">
-        <p className="font-display text-3xl text-ink">
+      <div className="bg-theme-surface border border-theme-line/60 rounded-2xl p-8 sm:p-10 text-center shadow-card-lg">
+        <p className="font-display text-3xl text-theme-ink">
           Movie<span className="text-rausch">Arl</span>
         </p>
-        <p className="text-sm text-muted mt-2 mb-8">Masuk buat identitasmu tersimpan.</p>
+        <p className="text-sm text-theme-muted mt-2 mb-8">Masuk buat identitasmu tersimpan.</p>
 
         {!loading && user ? (
           <div className="space-y-4">
@@ -39,8 +39,9 @@ export default function LoginPage() {
         ) : (
           <>
             <a
+              id="google-login"
               href="/api/auth/google/start"
-              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-white text-[#1f1f1f] font-semibold text-sm hover:bg-gray-100 active:scale-[0.98] transition-all shadow-card"
+              className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-theme-surface border border-theme-line/40 text-theme-ink-2 font-semibold text-sm hover:bg-theme-surface-2/50 active:scale-[0.98] transition-all"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden>
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -67,20 +68,26 @@ function PasswordForm() {
   const [pw, setPw] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true); setMsg("");
-    const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pw }) });
+    const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pw, remember }) });
     const j = await r.json().catch(() => ({})); setLoading(false);
     if (!r.ok) setMsg(j.error || "Gagal"); else window.location.assign("/");
   }
   return (
-    <form onSubmit={submit} className="mt-6 pt-6 border-t border-line/50 space-y-2">
-      <p className="text-xs text-muted text-center">atau login password</p>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className="w-full px-3 py-2 rounded-xl bg-surface2 border border-line text-sm" required />
-      <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" type="password" className="w-full px-3 py-2 rounded-xl bg-surface2 border border-line text-sm" required />
-      <button disabled={loading} className="w-full py-2.5 rounded-xl bg-surface2 border border-line text-sm font-semibold disabled:opacity-50">Masuk</button>
+    <form onSubmit={submit} className="mt-6 pt-6 border-t border-theme-line/30 space-y-3">
+      <p className="text-xs text-theme-muted text-center">atau login password</p>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className="w-full px-3 py-2.5 rounded-xl bg-theme-input border border-theme-line text-sm text-theme-ink placeholder:text-theme-muted focus:ring-2 focus:ring-rausch/30" required autoComplete="username" />
+      <div className="relative">
+        <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" type={show?"text":"password"} className="w-full px-3 py-2.5 pr-10 rounded-xl bg-theme-input border border-theme-line text-sm text-theme-ink placeholder:text-theme-muted focus:ring-2 focus:ring-rausch/30" required autoComplete="current-password" />
+        <button type="button" onClick={()=>setShow(!show)} className="absolute right-3 inset-y-0 flex items-center text-theme-muted hover:text-theme-ink" aria-label={show?"Sembunyikan":"Tampilkan"}>{show?"🙈":"👁️"}</button>
+      </div>
+      <label className="flex items-center gap-2 text-xs text-theme-muted"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} className="rounded border-theme-line bg-theme-surface-2/50 text-rausch focus:ring-rausch/30" /> Ingat saya</label>
+      <button disabled={loading} className="w-full py-2.5 rounded-xl bg-rausch text-white font-semibold text-sm hover:bg-rausch-active disabled:opacity-50 active:scale-[0.97]">Masuk</button>
       {msg && <p className="text-xs text-rausch text-center">{msg}</p>}
-      <p className="text-xs text-center"><a href="/forgot-password" className="text-muted hover:text-rausch">Lupa password?</a> · <a href="/register" className="text-rausch">Daftar</a></p>
+      <p className="text-xs text-center"><a href="/forgot-password" className="text-theme-muted hover:text-rausch">Lupa password?</a> · <a href="/register" className="text-rausch">Daftar</a></p>
     </form>
   );
 }

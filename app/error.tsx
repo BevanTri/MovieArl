@@ -7,6 +7,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       {error.digest && <p className="text-xs text-theme-muted/60 mb-4">#{error.digest}</p>}
       <div className="flex gap-3 justify-center mt-4">
         <button onClick={() => reset()} className="px-6 py-2.5 rounded-xl bg-rausch text-white font-semibold text-sm active:scale-[0.97]">Reload</button>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/" className="px-6 py-2.5 rounded-xl bg-theme-surface border border-theme-line text-sm">Back</a>
       </div>
     </div>

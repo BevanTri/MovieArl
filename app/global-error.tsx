@@ -8,6 +8,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <p className="text-sm text-theme-muted mb-4">{error.message || "Coba reload."}</p>
           <div className="flex gap-3 justify-center">
             <button onClick={() => reset()} className="px-6 py-2.5 rounded-xl bg-rausch text-white font-semibold text-sm">Reload</button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/" className="px-6 py-2.5 rounded-xl bg-theme-surface border border-theme-line text-sm">Back</a>
           </div>
         </div>
