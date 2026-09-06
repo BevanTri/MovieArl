@@ -19,9 +19,24 @@ const SORTS = [
   { key: "SCORE", label: "Rating" },
 ] as const;
 
-async function fetchTab(tab: Tab, page: number, sort: string): Promise<CategoryResult> {
+async function fetchTab(tab: Tab, page: number, sort: string, genre?: string, q?: string): Promise<CategoryResult> {
+  // genre/q from Categories (like ?genre=Action or ?country=Indonesia) -> use search for strict like Mangava
+  const keyword = q || genre;
+  if (keyword && keyword !== "ALL") {
+    // for country/lang like Indonesia/Hollywood/Indo Dub, search handles better than tabId filter
+    const { search } = await import("@/lib/moviebox");
+    try {
+      const s = await search(keyword, page);
+      if (s.items.length) return s;
+    } catch {}
+  }
   if (tab === "tv") return getTvSeries(page, sort);
   if (tab === "animation") return getAnimation(page, sort);
+  if (genre && genre !== "ALL") {
+    const { search } = await import("@/lib/moviebox");
+    const s = await search(genre, page);
+    if (s.items.length) return s;
+  }
   return getMovies(page, sort);
 }
 
@@ -30,17 +45,18 @@ export default async function BrowsePage({
   searchParams,
 }: {
   params: Promise<{ tab: string }>;
-  searchParams: Promise<{ page?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; genre?: string; country?: string; lang?: string; q?: string }>;
 }) {
   const { tab: rawTab } = await params;
-  const { page: rawPage, sort: rawSort } = await searchParams;
+  const { page: rawPage, sort: rawSort, genre: rawGenre, country: rawCountry, lang: rawLang, q: rawQ } = await searchParams;
   const tab = (TABS.find((t) => t.key === rawTab)?.key ?? "movies") as Tab;
   const page = Math.max(1, parseInt(rawPage ?? "1", 10) || 1);
   const sort = SORTS.find((s) => s.key === rawSort)?.key ?? "RECOMMEND";
+  const genre = rawGenre || rawCountry || rawLang || rawQ;
 
   let data: CategoryResult | null = null;
   try {
-    data = await fetchTab(tab, page, sort);
+    data = await fetchTab(tab, page, sort, genre, rawQ);
   } catch {
     data = null;
   }

@@ -195,10 +195,11 @@ async function getCategoryData(
   page = 1,
   perPage = 24,
   sort = "RECOMMEND",
+  genre = "ALL",
 ): Promise<CategoryResult> {
   const data = (await mbRequest(`${API_BASE}/subject/filter`, "POST", {
     tabId,
-    filter: { sort, genre: "ALL", country: "ALL", year: "ALL", language: "ALL" },
+    filter: { sort, genre, country: "ALL", year: "ALL", language: "ALL" },
     page,
     perPage,
   })) as { data?: Record<string, unknown> };
@@ -246,6 +247,42 @@ export async function getAnimation(page = 1, sort = "RECOMMEND") {
   // if still not enough, return filtered (could be empty -> show empty state, not live-action)
   if (filtered.length) return { ...res, items: filtered, total: filtered.length };
   return { ...res, items: [], total: 0 };
+}
+
+const genreCache = new Map<string, { at: number; data: HomeSection[] }>();
+const GENRE_TTL = 10 * 60 * 1000;
+export async function getGenreShelves(): Promise<HomeSection[]> {
+  const hit = genreCache.get("genres");
+  if (hit && Date.now() - hit.at < GENRE_TTL) return hit.data;
+  const genres = ["Action", "Horror", "Romance", "Comedy", "Sci-Fi", "Indonesia", "Hollywood", "Indo Dub"];
+  const results = await Promise.all(
+    genres.map(async (g) => {
+      try {
+        if (g === "Indonesia") {
+          const r = await search("indonesia", 1);
+          return { section: g, items: r.items.slice(0, 12) } as HomeSection;
+        }
+        if (g === "Hollywood") {
+          const r = await search("hollywood", 1);
+          return { section: g, items: r.items.slice(0, 12) } as HomeSection;
+        }
+        if (g === "Indo Dub") {
+          const r = await search("indo dub", 1);
+          return { section: g, items: r.items.slice(0, 12) } as HomeSection;
+        }
+        const r = await getCategoryData(2, 1, 24, "RECOMMEND", g);
+        const filtered = r.items.filter((it) => it.genre?.toLowerCase().includes(g.toLowerCase()));
+        if (filtered.length >= 3) return { section: g, items: filtered.slice(0, 12) } as HomeSection;
+        const s = await search(g.toLowerCase(), 1);
+        return { section: g, items: s.items.slice(0, 12) } as HomeSection;
+      } catch {
+        return { section: g, items: [] } as HomeSection;
+      }
+    }),
+  );
+  const filtered = results.filter((r) => r.items.length >= 3);
+  genreCache.set("genres", { at: Date.now(), data: filtered });
+  return filtered;
 }
 
 export async function searchSuggest(q: string): Promise<MediaItem[]> {
