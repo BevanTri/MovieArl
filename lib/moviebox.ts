@@ -190,16 +190,19 @@ export type CategoryResult = {
   items: MediaItem[];
 };
 
-async function getCategoryData(
+export async function getCategoryData(
   tabId: number,
   page = 1,
   perPage = 24,
   sort = "RECOMMEND",
   genre = "ALL",
+  country = "ALL",
+  year = "ALL",
+  language = "ALL",
 ): Promise<CategoryResult> {
   const data = (await mbRequest(`${API_BASE}/subject/filter`, "POST", {
     tabId,
-    filter: { sort, genre, country: "ALL", year: "ALL", language: "ALL" },
+    filter: { sort, genre, country, year, language },
     page,
     perPage,
   })) as { data?: Record<string, unknown> };

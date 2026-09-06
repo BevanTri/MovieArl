@@ -11,6 +11,7 @@ const TABS = [
 ] as const;
 
 type Tab = (typeof TABS)[number]["key"];
+const ALL = "ALL";
 
 const SORTS = [
   { key: "RECOMMEND", label: "Rekomendasi" },
@@ -19,24 +20,25 @@ const SORTS = [
   { key: "SCORE", label: "Rating" },
 ] as const;
 
-async function fetchTab(tab: Tab, page: number, sort: string, genre?: string, q?: string): Promise<CategoryResult> {
-  // genre/q from Categories (like ?genre=Action or ?country=Indonesia) -> use search for strict like Mangava
-  const keyword = q || genre;
-  if (keyword && keyword !== "ALL") {
-    // for country/lang like Indonesia/Hollywood/Indo Dub, search handles better than tabId filter
-    const { search } = await import("@/lib/moviebox");
+async function fetchTab(tab: Tab, page: number, sort: string, genre = "ALL", country = "ALL", year = "ALL"): Promise<CategoryResult> {
+  const { getCategoryData, getAnimation, getMovies, getTvSeries, search } = await import("@/lib/moviebox");
+  const tabId = tab === "tv" ? 5 : tab === "animation" ? 8 : 2;
+  if (tab === "animation" && genre === "ALL" && country === "ALL" && year === "ALL") return getAnimation(page, sort);
+  // server filter like Mangava — pass genre/country/year to subject/filter
+  try {
+    const data = await getCategoryData(tabId, page, 24, sort, genre, country, year, "ALL");
+    if (data.items.length) return data;
+  } catch {}
+  // fallback: if filter yields 0, try search keyword (for genre like Action via search is more reliable)
+  const kw = genre !== "ALL" ? genre : country !== "ALL" ? country : year !== "ALL" ? year : "";
+  if (kw && kw !== "ALL") {
     try {
-      const s = await search(keyword, page);
+      const s = await search(kw, page);
       if (s.items.length) return s;
     } catch {}
   }
   if (tab === "tv") return getTvSeries(page, sort);
   if (tab === "animation") return getAnimation(page, sort);
-  if (genre && genre !== "ALL") {
-    const { search } = await import("@/lib/moviebox");
-    const s = await search(genre, page);
-    if (s.items.length) return s;
-  }
   return getMovies(page, sort);
 }
 
@@ -45,21 +47,41 @@ export default async function BrowsePage({
   searchParams,
 }: {
   params: Promise<{ tab: string }>;
-  searchParams: Promise<{ page?: string; sort?: string; genre?: string; country?: string; lang?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string; genre?: string; country?: string; year?: string; lang?: string; q?: string }>;
 }) {
   const { tab: rawTab } = await params;
-  const { page: rawPage, sort: rawSort, genre: rawGenre, country: rawCountry, lang: rawLang, q: rawQ } = await searchParams;
+  const { page: rawPage, sort: rawSort, genre: rawGenre, country: rawCountry, year: rawYear, lang: rawLang, q: rawQ } = await searchParams;
   const tab = (TABS.find((t) => t.key === rawTab)?.key ?? "movies") as Tab;
   const page = Math.max(1, parseInt(rawPage ?? "1", 10) || 1);
   const sort = SORTS.find((s) => s.key === rawSort)?.key ?? "RECOMMEND";
-  const genre = rawGenre || rawCountry || rawLang || rawQ;
+  const genre = rawGenre || ALL;
+  const country = rawCountry || ALL;
+  const year = rawYear || ALL;
+  const q = rawQ;
 
   let data: CategoryResult | null = null;
   try {
-    data = await fetchTab(tab, page, sort, genre, rawQ);
+    data = await fetchTab(tab, page, sort, genre, country, year);
+    // if q present (from Categories search), prioritize search
+    if (q) {
+      const { search } = await import("@/lib/moviebox");
+      const s = await search(q, page);
+      if (s.items.length) data = s;
+    }
   } catch {
     data = null;
   }
+  const qs = (extra: Record<string, string | number | undefined>) => {
+    const p = new URLSearchParams();
+    if (sort !== "RECOMMEND") p.set("sort", sort);
+    if (genre !== ALL) p.set("genre", genre);
+    if (country !== ALL) p.set("country", country);
+    if (year !== ALL) p.set("year", year);
+    if (q) p.set("q", q);
+    Object.entries(extra).forEach(([k, v]) => { if (v !== undefined) p.set(k, String(v)); });
+    const s = p.toString();
+    return s ? `?${s}` : "";
+  };
 
   const totalPages = data ? Math.min(50, Math.ceil((data.total || 1) / data.perPage)) : 0;
 
@@ -89,7 +111,7 @@ export default async function BrowsePage({
         {SORTS.map((s) => (
           <Link
             key={s.key}
-            href={`/browse/${tab}?sort=${s.key}`}
+            href={`/browse/${tab}${qs({ sort: s.key, page: 1 })}`}
             className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors shrink-0 ${
               sort === s.key
                 ? "text-rausch bg-rausch/10 font-medium"
@@ -108,7 +130,7 @@ export default async function BrowsePage({
           <div className="mt-8 flex items-center justify-center gap-2 sm:gap-3">
             {page > 1 ? (
               <Link
-                href={`/browse/${tab}?page=${page - 1}&sort=${sort}`}
+                href={`/browse/${tab}${qs({ page: page - 1 })}`}
                 className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl surface border border-line/50 text-ink text-xs sm:text-sm font-medium hover:bg-surface2/50 transition-colors active:scale-[0.97]"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -129,7 +151,7 @@ export default async function BrowsePage({
               {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((i) => (
                 <Link
                   key={i}
-                  href={`/browse/${tab}?page=${i}&sort=${sort}`}
+                  href={`/browse/${tab}${qs({ page: i })}`}
                   className={`w-9 h-9 rounded-lg text-sm flex items-center justify-center font-medium transition-all ${
                     i === page
                       ? "bg-rausch text-white"
@@ -146,7 +168,7 @@ export default async function BrowsePage({
 
             {page < totalPages && (
               <Link
-                href={`/browse/${tab}?page=${page + 1}&sort=${sort}`}
+                href={`/browse/${tab}${qs({ page: page + 1 })}`}
                 className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-rausch text-white text-xs sm:text-sm font-semibold hover:bg-rausch-active transition-colors active:scale-[0.97] shadow-card"
               >
                 Selanjutnya
