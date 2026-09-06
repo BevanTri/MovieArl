@@ -24,10 +24,35 @@ async function fetchTab(tab: Tab, page: number, sort: string, genre = "ALL", cou
   const { getCategoryData, getAnimation, getMovies, getTvSeries, search } = await import("@/lib/moviebox");
   const tabId = tab === "tv" ? 5 : tab === "animation" ? 8 : 2;
   if (tab === "animation" && genre === "ALL" && country === "ALL" && year === "ALL") return getAnimation(page, sort);
-  // server filter like Mangava — pass genre/country/year to subject/filter
+  // server filter like Mangava — pass genre/country/year to subject/filter + strict post-check
   try {
     const data = await getCategoryData(tabId, page, 24, sort, genre, country, year, "ALL");
-    if (data.items.length) return data;
+    if (data.items.length) {
+      // strict check: if user requested Indonesia but none match, fallback to search
+      const matches = (it: { genre?: string | null; country?: string | null; year?: string | null }) => {
+        if (genre !== "ALL" && !it.genre?.toLowerCase().includes(genre.toLowerCase())) return false;
+        if (country !== "ALL" && !(it.country?.toLowerCase().includes(country.toLowerCase()) || it.genre?.toLowerCase().includes(country.toLowerCase()))) {
+          // for Indonesia, also check year/country via search fallback, not strict fail
+          // allow if country filter but genre contains country name
+          return false;
+        }
+        if (year !== "ALL" && it.year !== year) return false;
+        return true;
+      };
+      const filtered = data.items.filter(matches);
+      if ((genre !== "ALL" || country !== "ALL" || year !== "ALL")) {
+        if (filtered.length >= 3) return { ...data, items: filtered };
+        // if filtered too few, try search keyword
+        const kw = genre !== "ALL" ? genre : country !== "ALL" ? country : year;
+        try {
+          const s = await search(String(kw), page);
+          if (s.items.length) return s;
+        } catch {}
+        if (filtered.length) return { ...data, items: filtered };
+      } else {
+        return data;
+      }
+    }
   } catch {}
   // fallback: if filter yields 0, try search keyword (for genre like Action via search is more reliable)
   const kw = genre !== "ALL" ? genre : country !== "ALL" ? country : year !== "ALL" ? year : "";
